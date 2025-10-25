@@ -1,0 +1,84 @@
+<!-- controller.html (potong & tempel di page davznew) -->
+<script>
+  // channel nama bebas, tapi sama di controlled
+  const bc = new BroadcastChannel('davz-control');
+
+  function sendAddID(id, owner, note) {
+    bc.postMessage({ action: 'addID', payload: { id, owner, note }, from: 'controller' });
+    console.log('Sent addID', id);
+  }
+
+  function sendDeleteID(id) {
+    bc.postMessage({ action: 'deleteID', payload: { id }, from: 'controller' });
+    console.log('Sent deleteID', id);
+  }
+
+  function sendUpdatePassword(username, password) {
+    bc.postMessage({ action: 'updatePassword', payload: { username, password }, from: 'controller' });
+    console.log('Sent updatePassword', username);
+  }
+
+  // contoh UI hook (sesuaikan HTMLmu)
+  document.addEventListener('DOMContentLoaded', () => {
+    // tambah ID
+    const addIDBtn = document.getElementById('addIDBtnController');
+    addIDBtn?.addEventListener('click', () => {
+      const id = document.getElementById('ctrl_newID').value.trim();
+      const owner = document.getElementById('ctrl_newOwner').value.trim();
+      const note = document.getElementById('ctrl_newNote').value.trim();
+      if (!id || !owner || !note) return alert('Lengkapi data ID');
+      sendAddID(id, owner, note);
+      document.getElementById('ctrl_newID').value = '';
+      document.getElementById('ctrl_newOwner').value = '';
+      document.getElementById('ctrl_newNote').value = '';
+    });
+
+    // hapus ID
+    const delIDBtn = document.getElementById('delIDBtnController');
+    delIDBtn?.addEventListener('click', () => {
+      const id = document.getElementById('ctrl_delID').value.trim();
+      if (!id) return alert('Masukkan ID');
+      sendDeleteID(id);
+      document.getElementById('ctrl_delID').value = '';
+    });
+
+    // update password
+    const updPassBtn = document.getElementById('updPassBtnController');
+    updPassBtn?.addEventListener('click', () => {
+      const u = document.getElementById('ctrl_updUser').value.trim();
+      const p = document.getElementById('ctrl_updPass').value.trim();
+      if (!u || !p) return alert('Isi username & password');
+      sendUpdatePassword(u, p);
+      document.getElementById('ctrl_updUser').value = '';
+      document.getElementById('ctrl_updPass').value = '';
+    });
+  });
+
+  // optional: terima balasan dari controlled
+  bc.onmessage = (ev) => {
+    const msg = ev.data;
+    console.log('Controller menerima pesan:', msg);
+    // kalau controlled merespons, bisa tampilkan notif: msg.status / msg.info
+  };
+</script>
+
+<!-- Minimal markup contoh untuk controller forms -->
+<div>
+  <h3>Controller — Tambah ID</h3>
+  <input id="ctrl_newID" placeholder="-123456789"><br>
+  <input id="ctrl_newOwner" placeholder="owner"><br>
+  <input id="ctrl_newNote" placeholder="[KETERANGAN]"><br>
+  <button id="addIDBtnController">Kirim: Tambah ID</button>
+</div>
+
+<div>
+  <h3>Controller — Hapus ID</h3>
+  <input id="ctrl_delID" placeholder="-123456789"><button id="delIDBtnController">Kirim: Hapus ID</button>
+</div>
+
+<div>
+  <h3>Controller — Update Password</h3>
+  <input id="ctrl_updUser" placeholder="username"><br>
+  <input id="ctrl_updPass" placeholder="password"><br>
+  <button id="updPassBtnController">Kirim: Update Password</button>
+</div>
