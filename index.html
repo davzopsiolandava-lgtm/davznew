@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>LIST ID VIP DAVZ - Control Panel</title>
+  <title>LIST ID VIP DAVZ - Control & Controller</title>
   <style>
     :root { --bg:#0f172a; --card:#fff; --accent:#2563eb; --muted:#6b7280; }
     body {
@@ -11,21 +11,23 @@
       font-family: Inter, system-ui, "Segoe UI", Roboto, Arial;
       background:url("https://files.catbox.moe/7iibjs") center/cover fixed;
       min-height:100vh;
-      display:flex; align-items:center; justify-content:center;
+      display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
       animation:bgmove 25s ease-in-out infinite alternate;
       color:#111;
+      padding:40px 0;
     }
     @keyframes bgmove {
       from { background-position:center top; filter:brightness(0.9); }
       to { background-position:center bottom; filter:brightness(1); }
     }
-    .wrap { width:400px; position:relative; }
+    .wrap { width:400px; position:relative; margin-bottom:40px; }
     .card {
       background:rgba(255,255,255,0.9);
       border-radius:12px;
       padding:22px;
       box-shadow:0 8px 30px rgba(15,23,42,0.25);
       backdrop-filter:blur(6px);
+      margin-bottom:30px;
     }
     h1,h2,h3 { margin:0 0 12px; }
     input {
@@ -48,9 +50,26 @@
     .error { background:#fff1f2; color:#7f1d1d; display:block; }
     #navigator button { width:100%; margin:6px 0; background:#1e293b; }
     .small { text-align:center; font-size:12px; color:#64748b; margin-top:8px; }
+
+    /* Controller area */
+    #controller {
+      background:#111; color:#fff;
+      padding:22px; border-radius:12px;
+      width:400px; box-shadow:0 8px 30px rgba(0,0,0,0.4);
+    }
+    #controller input, #controller button {
+      width:auto; display:inline-block; margin:4px; vertical-align:middle;
+    }
+    #controller input { border-radius:6px; padding:8px; border:none; width:180px; }
+    #controller button {
+      background:#2563eb; border:none; border-radius:6px; padding:8px 12px; cursor:pointer; color:white;
+    }
+    #controller button:hover { background:#1d4ed8; }
+    #controller .log { background:#222; color:#ccc; padding:10px; border-radius:6px; margin-top:10px; white-space:pre-wrap; font-size:12px; height:100px; overflow:auto; }
   </style>
 </head>
 <body>
+
   <audio id="phonkMusic" autoplay loop>
     <source src="https://files.catbox.moe/8wbv1k.mp3" type="audio/mpeg" />
   </audio>
@@ -100,17 +119,28 @@
     </div>
   </div>
 
+  <!-- CONTROLLER AREA -->
+  <div id="controller">
+    <h2>🌐 Controller</h2>
+    <p>Kirim perintah ke panel di atas (BroadcastChannel).</p>
+
+    <h4>Tambah ID</h4>
+    <input id="idInput" placeholder="ID">
+    <input id="ownerInput" placeholder="Owner">
+    <input id="noteInput" placeholder="[KETERANGAN]">
+    <button id="sendBtn">Kirim Add ID</button>
+
+    <h4>Hapus ID</h4>
+    <input id="delInput" placeholder="ID untuk dihapus">
+    <button id="delBtn" style="background:#dc2626;">Hapus ID</button>
+
+    <div class="log" id="logBox">Log:</div>
+  </div>
+
   <script>
+    // ====== DATA DASAR ======
     const accounts = JSON.parse(localStorage.getItem("accounts")) || [{ user:"davznewera", pass:"davz1231" }];
-    let vipListData = localStorage.getItem("vipList") || `-187480083
--davz1231
-[TECNO LI7]
-
----
-
--184647956
--davz1231
-[AIRLANGGA]`;
+    let vipListData = localStorage.getItem("vipList") || `-187480083\n-davz1231\n[TECNO LI7]\n\n---\n\n-184647956\n-davz1231\n[AIRLANGGA]`;
     let externalSites = JSON.parse(localStorage.getItem("externalSites")) || [
       { name:"YouTube", url:"https://youtube.com" },
       { name:"GitHub", url:"https://github.com" }
@@ -125,14 +155,16 @@
     const vipList = document.getElementById("vipList");
     const navigatorBox = document.getElementById("navigator");
 
-    // tampilkan data
+    const bc = new BroadcastChannel('davz_control_channel');
+    const logBox = document.getElementById('logBox');
+    function log(msg){ logBox.textContent += `\n${msg}`; logBox.scrollTop = logBox.scrollHeight; }
+
     function refreshLists() {
       accountList.textContent = accounts.map(a=>`- ${a.user}`).join("\n");
       vipList.textContent = vipListData;
       renderNavigator();
     }
 
-    // render navigator
     function renderNavigator() {
       navigatorBox.innerHTML = "";
       externalSites.forEach(s => {
@@ -149,7 +181,7 @@
       localStorage.setItem("externalSites", JSON.stringify(externalSites));
     }
 
-    // login
+    // ====== LOGIN ======
     document.getElementById("loginBtn").onclick = () => {
       const u = username.value.trim();
       const p = password.value.trim();
@@ -170,14 +202,14 @@
       }
     };
 
-    // logout
+    // ====== LOGOUT ======
     document.getElementById("logoutBtn").onclick = () => {
       panelCard.style.display="none";
       loginCard.style.display="block";
       localStorage.removeItem("loggedIn");
     };
 
-    // akun
+    // ====== AKUN ======
     document.getElementById("addAccountBtn").onclick = ()=>{
       const nu=document.getElementById("newUser").value.trim();
       const np=document.getElementById("newPass").value.trim();
@@ -193,25 +225,32 @@
       if(idx>-1){accounts.splice(idx,1);saveAll();refreshLists();}
     };
 
-    // VIP
+    // ====== VIP ======
+    function addVIP(id, o, n){
+      vipListData += `\n\n---\n\n${id}\n-${o}\n${n}`;
+      saveAll(); refreshLists();
+    }
+    function deleteVIP(id){
+      const lines=vipListData.split("\n");
+      const idx=lines.findIndex(l=>l.trim()===id);
+      if(idx>-1){lines.splice(Math.max(0,idx-1),5);vipListData=lines.join("\n");saveAll();refreshLists();}
+    }
+
     document.getElementById("addIDBtn").onclick=()=>{
       const id=document.getElementById("newID").value.trim();
       const o=document.getElementById("newOwner").value.trim();
       const n=document.getElementById("newNote").value.trim();
       if(!id||!o||!n)return alert("Lengkapi data ID VIP");
-      vipListData += `\n\n---\n\n${id}\n-${o}\n${n}`;
-      saveAll(); refreshLists();
+      addVIP(id,o,n);
       document.getElementById("newID").value=document.getElementById("newOwner").value=document.getElementById("newNote").value="";
     };
     document.getElementById("delIDBtn").onclick=()=>{
       const del=document.getElementById("delID").value.trim();
       if(!del)return;
-      const lines=vipListData.split("\n");
-      const idx=lines.findIndex(l=>l.trim()===del);
-      if(idx>-1){lines.splice(Math.max(0,idx-1),5);vipListData=lines.join("\n");saveAll();refreshLists();}
+      deleteVIP(del);
     };
 
-    // navigator
+    // ====== NAVIGATOR ======
     document.getElementById("addSiteBtn").onclick=()=>{
       const name=document.getElementById("newSiteName").value.trim();
       const url=document.getElementById("newSiteURL").value.trim();
@@ -221,15 +260,37 @@
       document.getElementById("newSiteName").value=document.getElementById("newSiteURL").value="";
     };
 
-    // auto-login
+    // ====== AUTO LOGIN ======
     window.addEventListener("load",()=>{
       refreshLists();
       const u=localStorage.getItem("loggedIn");
       if(u){loginCard.style.display="none";panelCard.style.display="block";document.getElementById("adminName").textContent=u;}
       const audio=document.getElementById("phonkMusic");
-      audio.volume=0.5;
-      audio.play().catch(()=>{});
+      audio.volume=0.5; audio.play().catch(()=>{});
     });
+
+    // ====== CONTROLLER (BroadcastChannel) ======
+    document.getElementById('sendBtn').onclick = () => {
+      const id = idInput.value.trim(), owner = ownerInput.value.trim(), note = noteInput.value.trim();
+      if(!id||!owner||!note) return alert("Lengkapi semua data!");
+      bc.postMessage({ action:'addID', payload:{ id, owner, note }, from:'controller' });
+      log(`Sent addID: ${id}, ${owner}, ${note}`);
+    };
+    document.getElementById('delBtn').onclick = () => {
+      const id = delInput.value.trim();
+      if(!id) return alert("Isi ID!");
+      bc.postMessage({ action:'deleteID', payload:{ id }, from:'controller' });
+      log(`Sent deleteID: ${id}`);
+    };
+
+    // ====== TERIMA PESAN DARI CHANNEL ======
+    bc.onmessage = (e) => {
+      const { action, payload, from } = e.data;
+      if(from === 'controller'){
+        if(action === 'addID'){ addVIP(payload.id, payload.owner, payload.note); log("ACK: ID ditambahkan."); }
+        if(action === 'deleteID'){ deleteVIP(payload.id); log("ACK: ID dihapus."); }
+      }
+    };
   </script>
 </body>
-  </html>
+</html>
