@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Controller - Web 1</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; padding: 40px; }
+    input, button { padding: 10px; margin: 5px; border-radius: 6px; border: none; }
+    input { width: 200px; }
+    button { background: #2563eb; color: white; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .log { background: #222; padding: 10px; border-radius: 6px; margin-top: 20px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>🌐 Controller</h1>
+  <p>Kirim perintah ke <b>Controlled Page</b>.</p>
+
+  <h3>Tambah ID</h3>
+  <input id="idInput" placeholder="ID">
+  <input id="ownerInput" placeholder="Owner">
+  <input id="noteInput" placeholder="[KETERANGAN]">
+  <button id="sendBtn">Kirim Add ID</button>
+
+  <h3>Hapus ID</h3>
+  <input id="delInput" placeholder="ID untuk dihapus">
+  <button id="delBtn" style="background:#dc2626;">Hapus ID</button>
+
+  <div class="log" id="logBox">Log:\n</div>
+
+  <script>
+    const bc = new BroadcastChannel('davz_control_channel');
+    const logBox = document.getElementById('logBox');
+    function log(msg){ logBox.textContent += `\n${msg}`; }
+
+    document.getElementById('sendBtn').onclick = () => {
+      const id = idInput.value.trim(), owner = ownerInput.value.trim(), note = noteInput.value.trim();
+      bc.postMessage({ action:'addID', payload:{ id, owner, note }, from:'controller' });
+      log(`Sent addID: ${id}, ${owner}, ${note}`);
+    };
+
+    document.getElementById('delBtn').onclick = () => {
+      const id = delInput.value.trim();
+      bc.postMessage({ action:'deleteID', payload:{ id }, from:'controller' });
+      log(`Sent deleteID: ${id}`);
+    };
+
+    bc.onmessage = (e) => log(`ACK: ${JSON.stringify(e.data)}`);
+  </script>
+</body>
+</html>
