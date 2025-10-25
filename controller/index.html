@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Controller - BroadcastChannel test</title>
+  <style>
+    body { font-family: system-ui, Arial; padding: 16px; max-width:900px; }
+    label { display:block; margin-top:8px; font-weight:600; }
+    input, textarea { width:100%; padding:8px; margin-top:4px; box-sizing:border-box; }
+    button { margin-top:8px; padding:8px 12px; }
+    pre#log { height:200px; overflow:auto; background:#f6f6f6; padding:8px; border:1px solid #ddd; }
+    .row { display:flex; gap:8px; }
+    .col { flex:1; }
+  </style>
+</head>
+<body>
+  <h1>Controller (BroadcastChannel)</h1>
+
+  <section>
+    <h2>Tambah ID (addID)</h2>
+    <label>ID</label>
+    <input id="in_add_id" placeholder="contoh: -190000000" />
+    <label>Owner</label>
+    <input id="in_add_owner" placeholder="contoh: davz1231" />
+    <label>Note</label>
+    <textarea id="in_add_note" rows="3" placeholder="contoh: [EXAMPLE]"></textarea>
+    <button id="btn_add">Kirim addID</button>
+  </section>
+
+  <section>
+    <h2>Hapus ID (deleteID)</h2>
+    <label>ID</label>
+    <input id="in_del_id" placeholder="ID yang akan dihapus" />
+    <button id="btn_del">Kirim deleteID</button>
+  </section>
+
+  <section>
+    <h2>Update Password (updatePassword)</h2>
+    <label>Username</label>
+    <input id="in_up_user" placeholder="username" />
+    <label>Password</label>
+    <input id="in_up_pass" placeholder="new password" />
+    <button id="btn_up">Kirim updatePassword</button>
+  </section>
+
+  <section>
+    <h2>Log</h2>
+    <pre id="log"></pre>
+  </section>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function log(...args) {
+      const t = new Date().toISOString();
+      logEl.textContent += '['+t+'] ' + args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') + '\\n';
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(...args);
+    }
+
+    // BroadcastChannel - gunakan nama channel yang sama dengan controlled page
+    const bc = new BroadcastChannel('davz-control');
+
+    bc.onmessage = (ev) => {
+      log('Menerima pesan (ack) dari controlled:', ev.data);
+    };
+
+    function send(action, payload) {
+      const msg = { action, payload };
+      bc.postMessage(msg);
+      log('Mengirim:', msg);
+    }
+
+    document.getElementById('btn_add').addEventListener('click', () => {
+      const id = document.getElementById('in_add_id').value.trim();
+      const owner = document.getElementById('in_add_owner').value.trim();
+      const note = document.getElementById('in_add_note').value.trim();
+      if (!id) { alert('Isi ID'); return; }
+      send('addID', { id, owner, note });
+    });
+
+    document.getElementById('btn_del').addEventListener('click', () => {
+      const id = document.getElementById('in_del_id').value.trim();
+      if (!id) { alert('Isi ID'); return; }
+      send('deleteID', { id });
+    });
+
+    document.getElementById('btn_up').addEventListener('click', () => {
+      const username = document.getElementById('in_up_user').value.trim();
+      const password = document.getElementById('in_up_pass').value;
+      if (!username) { alert('Isi username'); return; }
+      send('updatePassword', { username, password });
+    });
+
+    // contoh cepat: tombol keyboard shortcut (A = add contoh)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'A') {
+        send('addID', { id: '-999999999', owner: 'tester', note: '[QUICK ADD]' });
+      }
+    });
+
+    // bersihkan
+    window.addEventListener('beforeunload', () => bc.close());
+    log('Controller siap — channel "davz-control". Buka juga private/index.html di tab lain pada origin yang sama.');
+  </script>
+</body>
+</html>
